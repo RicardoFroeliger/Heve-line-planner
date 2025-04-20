@@ -191,8 +191,20 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
                             }}
                         />
                         {canvasItems.map((item, index) => (
-                            <Story key={index} xPos={item.x} yPos={item.y} />
+                            <Story key={index} xPos={item.x} yPos={item.y} type={item.type} />
                         ))}
+                        {
+                            !canvasItems.filter(item => item.type !== 'create')?.length && (
+                                <>
+                                    <h1 className="pb-36 text-2xl absolute -translate-x-1/2 -translate-y-1/2" style={{
+                                        top: getViewportCenter().y,
+                                        left: getViewportCenter().x,
+                                    }}>
+                                        Create your first story by clicking below
+                                    </h1>
+                                </>
+                            )
+                        }
                     </div>
                 </TransformComponent>
             </TransformWrapper>
