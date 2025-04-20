@@ -1,103 +1,93 @@
-import { PlusCircleIcon } from 'lucide-react';
-import logo from './logo.png';
-import React, { useEffect, useState } from 'react';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "./components/ui/tooltip";
-import { useStore } from 'react-stores';
-import { storiesStore } from './stores/storiesStore';
-
-type Story = {
-    name: string;
-    stories: Story[];
-}
+import React, { useMemo } from 'react';
+import Canvas from './components/Canvas';
+import { useCanvasPositioning } from './hooks/useCanvasPositioning';
+import { StoryType } from './components/Story';
 
 function App() {
-    const [stories, setStories] = useState<Story[]>([]);
-    const myStoreState = useStore(storiesStore);  // Getting the store state
-
-    // Set stories state on init
-    useEffect(() => {
-        if (myStoreState.counter === 0) {
-            storiesStore.setState({
-                counter: 1,
-            });
+    const stories = useMemo<StoryType[]>(() => [
+        {
+            id: 1,
+            order: 1,
+            title: 'Chapter 1',
+            text: '',
+            stories: [
+                {
+                    id: 2,
+                    order: 1,
+                    title: 'Exercise 1',
+                    text: '',
+                    stories: [{
+                        id: 3,
+                        order: 2,
+                        title: 'Part 1',
+                        text: '',
+                        stories: []
+                    }, {
+                        id: 4,
+                        order: 2,
+                        title: 'Part 2',
+                        text: '',
+                        stories: []
+                    }, {
+                        id: 5,
+                        order: 3,
+                        title: 'Part 3',
+                        text: '',
+                        stories: []
+                    }]
+                },
+                {
+                    id: 6,
+                    order: 2,
+                    title: 'Exercise 2',
+                    text: '',
+                    stories: []
+                }]
+        },
+        {
+            id: 7,
+            order: 2,
+            title: 'Chapter 2',
+            text: '',
+            stories: [
+                {
+                    id: 8,
+                    order: 1,
+                    title: 'Exercise 1',
+                    text: '',
+                    stories: [{
+                        id: 9,
+                        order: 2,
+                        title: 'Part 1',
+                        text: '',
+                        stories: []
+                    }]
+                },
+                {
+                    id: 10,
+                    order: 2,
+                    title: 'Exercise 2',
+                    text: '',
+                    stories: []
+                }]
+        },
+        {
+            id: 11,
+            order: 2,
+            title: 'Math',
+            text: '',
+            stories: []
         }
-    }, []);
+    ], []);
 
-    function createStory() {
-        setStories([
-            ...stories,
-            {
-                name: 'New Story',
-                stories: [],
-            }
-        ]);
-
-        // Increment stories counter
-        storiesStore.setState({
-            counter: myStoreState.counter + 1,
-        });
-    }
+    // Use position calculated items for canvas
+    const { canvasRef, canvasItems } = useCanvasPositioning(stories);
 
     return (
-        <div>
-            {myStoreState.counter}
-
-            <div className="text-center h-full">
-                <header className="bg-[#282c34] min-h-[100vh] flex flex-col items-center text-white">
-                    <img
-                        src={logo}
-                        className="h-20 absolute top-20 rounded-full border-gray-500 border-2"
-                        alt="logo"
-                    />
-                    <div className="flex flex-col items-center justify-center flex-grow w-full">
-                        {
-                            !stories.length && (
-                                <h1 className="mb-12 text-2xl">
-                                    Create your first story by clicking below
-                                </h1>
-                            )
-                        }
-                        <div className='flex flex-row gap-20 relative'>
-                            <div className="absolute w-[90%] h-1 bg-gray-700 rounded-full z-10 top-1/2 left-1/2 -translate-x-[50%]"></div>
-
-                            <div className="flex flex-row gap-20 relative z-20">
-                                {
-                                    stories.map(story => (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger>
-                                                    <button
-                                                        className="h-10 w-10 rounded-full bg-blue-600 flex justify-center items-center cursor-pointer text-2xl"
-                                                        onClick={createStory}
-                                                    >
-                                                        0
-                                                    </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="flex flex-col justify-center">
-                                                    <button className="cursor-pointer">View</button>
-                                                    <button className="cursor-pointer">Delete</button>
-                                                    <button className="cursor-pointer">Edit</button>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    ))
-                                }
-                                <button
-                                    className="h-10 w-10 rounded-full bg-blue-600 flex justify-center items-center cursor-pointer"
-                                    onClick={createStory}
-                                >
-                                    <PlusCircleIcon className="h-7 w-7" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-            </div>
+        <div className="text-center h-full">
+            <header className="bg-[#282c34] min-h-[100vh] flex flex-col items-center text-white">
+                <Canvas ref={canvasRef} canvasItems={canvasItems} />
+            </header>
         </div>
     );
 }

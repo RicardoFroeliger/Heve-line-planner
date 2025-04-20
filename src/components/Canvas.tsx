@@ -1,30 +1,50 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import Story, { StoryType } from './Story';
 
-type ElementData = {
-    id: number;
+export type CanvasItem = StoryType & {
     x: number;
     y: number;
-    text: string;
 };
 
-export default function Canvas() {
-    const [elements, setElements] = useState<ElementData[]>([
-        { id: 1, x: 100, y: 100, text: 'Element 1' },
-        { id: 2, x: 600, y: 200, text: 'Element 2' },
-        { id: 3, x: 1800, y: 400, text: 'Far Element' },
-        { id: 3, x: 1800, y: 1500, text: 'Far Element' },
-    ]);
+export type CanvasHandle = {
+    getViewportCenter: () => { x: number; y: number };
+};
 
+type CanvasProps = {
+    canvasItems: CanvasItem[]
+}
+
+const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
     const transformRef = useRef<any>(null);
+    const innerCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Canvas size and offset
+    const getViewportCenter = () => {
+        if (!transformRef.current) return { x: 0, y: 0 };
+
+        const { scale, positionX, positionY } = transformRef.current.instance.transformState;
+
+        const centerX = (window.innerWidth / 2 - positionX) / scale;
+        const centerY = (window.innerHeight / 2 - positionY) / scale;
+
+        return { x: centerX, y: centerY };
+    }
+
+    useImperativeHandle(ref, () => ({
+        getViewportCenter
+    }));
+
+    console.log(canvasItems);
+    console.log(getViewportCenter());
+
+
+    // Canvas size and offset    
     const canvasSize = useMemo(() => {
-        const padding = 200;
-        const minX = Math.min(...elements.map((el) => el.x));
-        const maxX = Math.max(...elements.map((el) => el.x));
-        const minY = Math.min(...elements.map((el) => el.y));
-        const maxY = Math.max(...elements.map((el) => el.y));
+        const padding = 50;
+        const minX = Math.min(...canvasItems.map((el) => el.x));
+        const maxX = Math.max(...canvasItems.map((el) => el.x));
+        const minY = Math.min(...canvasItems.map((el) => el.y));
+        const maxY = Math.max(...canvasItems.map((el) => el.y));
 
         const contentWidth = maxX - minX + padding * 2;
         const contentHeight = maxY - minY + padding * 2;
@@ -35,7 +55,7 @@ export default function Canvas() {
             offsetX: minX - padding,
             offsetY: minY - padding,
         };
-    }, [elements]);
+    }, [canvasItems]);
 
     // Limit zooming out so canvas always fills screen
     const minZoom = useMemo(() => {
@@ -56,13 +76,10 @@ export default function Canvas() {
 
             const canvasCenterX = canvasSize.width / 2;
             const canvasCenterY = canvasSize.height / 2;
-            const screenCenterX = containerWidth / 2;
-            const screenCenterY = containerHeight / 2;
 
-            const offsetX = screenCenterX - canvasCenterX * newScale;
-            const offsetY = screenCenterY - canvasCenterY * newScale;
+            const offsetX = containerWidth / 2 - canvasCenterX * newScale;
+            const offsetY = containerHeight / 2 - canvasCenterY * newScale;
 
-            transformRef.current.setTransform(screenCenterX - canvasCenterX, screenCenterY - canvasCenterY, 1, 0);
             transformRef.current.setTransform(offsetX, offsetY, newScale, 300);
         }
     }, [canvasSize]);
@@ -80,6 +97,49 @@ export default function Canvas() {
             window.removeEventListener("wheel", handleWheel);
         };
     }, []);
+
+    const drawLines = () => {
+        if (!innerCanvasRef.current) return;
+
+        const ctx = innerCanvasRef.current.getContext('2d');
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, innerCanvasRef.current.width, innerCanvasRef.current.height);
+        ctx.strokeStyle = '#6e737d';
+        ctx.lineWidth = 4;
+
+        const drawLineBetween = (from: CanvasItem, to: CanvasItem) => {
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+        };
+
+        // Draw parent-child lines
+        canvasItems.forEach(parent => {
+            if (parent.stories) {
+                parent.stories.forEach(child => {
+                    const childFull = canvasItems.find(item => item.id === child.id);
+                    if (childFull) drawLineBetween(parent, childFull);
+                });
+            }
+        });
+
+        // Draw lines between top-level items (no one is linking to them)
+        const childIds = new Set(canvasItems.flatMap(item => item.stories?.map(story => story.id) || []));
+        const topLevelItems = canvasItems.filter(item => !childIds.has(item.id));
+
+        // Sort top-levels (optional: by x or y position for nicer layout)
+        const sortedTopLevels = topLevelItems.slice().sort((a, b) => a.x - b.x);
+
+        for (let i = 0; i < sortedTopLevels.length - 1; i++) {
+            drawLineBetween(sortedTopLevels[i], sortedTopLevels[i + 1]);
+        }
+    };
+
+    useEffect(() => {
+        drawLines();
+    }, [canvasItems]);
 
     return (
         <div
@@ -111,32 +171,33 @@ export default function Canvas() {
                             width: `${canvasSize.width}px`,
                             height: `${canvasSize.height}px`,
                             position: 'relative',
-                            backgroundColor: '#fff',
-                            backgroundImage:
-                                'linear-gradient(to right, #a0a0a0 1px, transparent 1px), linear-gradient(to bottom, #a0a0a0 1px, transparent 1px)',
-                            backgroundSize: '50px 50px',
+                            // backgroundColor: '#fff',
+                            // backgroundImage:
+                            //     'linear-gradient(to right, #a0a0a0 1px, transparent 1px), linear-gradient(to bottom, #a0a0a0 1px, transparent 1px)',
+                            // backgroundSize: '50px 50px',
                             boxSizing: 'border-box',
                         }}
                     >
-                        {elements.map((el) => (
-                            <div
-                                key={el.id}
-                                style={{
-                                    position: 'absolute',
-                                    left: el.x,
-                                    top: el.y,
-                                    padding: '10px 20px',
-                                    background: '#4287f5',
-                                    color: 'white',
-                                    borderRadius: 8,
-                                }}
-                            >
-                                {el.text}
-                            </div>
+                        <canvas
+                            ref={innerCanvasRef}
+                            width={canvasSize.width}
+                            height={canvasSize.height}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                pointerEvents: 'none',
+                                zIndex: 1
+                            }}
+                        />
+                        {canvasItems.map((item, index) => (
+                            <Story key={index} xPos={item.x} yPos={item.y} />
                         ))}
                     </div>
                 </TransformComponent>
             </TransformWrapper>
         </div>
     );
-}
+});
+
+export default Canvas;
