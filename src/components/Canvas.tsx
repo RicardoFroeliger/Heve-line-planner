@@ -191,7 +191,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
                             }}
                         />
                         {canvasItems.map((item, index) => (
-                            <Story key={index} xPos={item.x} yPos={item.y} type={item.type} />
+                            <Story key={index} {...item} />
                         ))}
                         {
                             !canvasItems.filter(item => item.type !== 'create')?.length && (
