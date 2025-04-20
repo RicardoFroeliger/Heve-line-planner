@@ -1,6 +1,12 @@
 import { PlusCircleIcon } from 'lucide-react';
 import logo from './logo.png';
 import React, { useState } from 'react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./components/ui/tooltip";
 
 type Story = {
     name: string;
@@ -41,12 +47,23 @@ function App() {
                         <div className="flex flex-row gap-20 relative z-20">
                             {
                                 stories.map(story => (
-                                    <button
-                                        className="h-10 w-10 rounded-full bg-blue-600 flex justify-center items-center cursor-pointer text-2xl"
-                                        onClick={createStory}
-                                    >
-                                        0
-                                    </button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <button
+                                                    className="h-10 w-10 rounded-full bg-blue-600 flex justify-center items-center cursor-pointer text-2xl"
+                                                    onClick={createStory}
+                                                >
+                                                    0
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="flex flex-col justify-center">
+                                                <button className="cursor-pointer">View</button>
+                                                <button className="cursor-pointer">Delete</button>
+                                                <button className="cursor-pointer">Edit</button>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 ))
                             }
                             <button
