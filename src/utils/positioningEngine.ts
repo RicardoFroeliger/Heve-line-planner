@@ -39,18 +39,25 @@ export function flattenAndCalculatePositions(
 ): CanvasItem[] {
     let result: CanvasItem[] = [];
 
-    const effectiveSpacingX = spacingX * 1.5;
-    const effectiveSpacingY = spacingY * 1.5;
+    // Calculate total width of this level (every item counts as 1 block)
+    // const totalWidth = elements.length * spacingX;
+    // let offsetX = parentX - totalWidth / 2 + spacingX / 2;
 
     // Total width occupied by the entire tree for centering at root level
     const totalLeafs = countTotalLeafNodes(elements);
-    let offsetX = parentX - (totalLeafs * effectiveSpacingX) / 2;
+    let offsetX = parentX - (totalLeafs * spacingX) / 2;
 
     for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
+
+        // block spacing
+        // const calculatedX = offsetX;
+        // const calculatedY = centerY + (depth - totalDepth / 2) * spacingY;
+
+        // Tree leaf spacing
         const thisSubtreeLeafs = countTotalLeafNodes([element]);
-        const calculatedX = offsetX + (thisSubtreeLeafs * effectiveSpacingX) / 2;
-        const calculatedY = centerY + (depth - totalDepth / 2) * effectiveSpacingY;
+        const calculatedX = offsetX + (thisSubtreeLeafs * spacingX) / 2;
+        const calculatedY = centerY + (depth - totalDepth / 2) * spacingX;
 
         result.push({ ...element, x: calculatedX, y: calculatedY });
 
@@ -61,16 +68,17 @@ export function flattenAndCalculatePositions(
                 centerY,
                 spacingY,
                 spacingX,
-                currentY + effectiveSpacingY,
+                currentY + spacingY,
                 depth + 1,
                 totalDepth,
                 calculatedX
             );
 
-            result = [...result, ...children];
+            result = result.concat(children);
         }
 
-        offsetX += thisSubtreeLeafs * effectiveSpacingX;
+        // offsetX += spacingX; // Block spacing
+        offsetX += thisSubtreeLeafs * spacingX; // Tree leaf spacing
     }
 
     return result;

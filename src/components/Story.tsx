@@ -116,9 +116,9 @@ function Story({
                 <div className="absolute -translate-x-1/2 -translate-y-1/2 z-10" style={{ left: x, top: y }}>
                     <TooltipProvider>
                         <Tooltip>
-                            <TooltipTrigger className="h-10 w-10 rounded-full bg-blue-600 flex justify-center items-center cursor-pointer text-2xl">
+                            <TooltipTrigger className="rounded-xl p-2 bg-blue-600 flex justify-center items-center cursor-pointer text-2xl">
 
-                                <span>{stories.length}</span>
+                                <span>{title}</span>
                             </TooltipTrigger>
                             <TooltipContent className="flex flex-col justify-center">
                                 <button className="cursor-pointer">View</button>

@@ -12,76 +12,120 @@ export type CanvasHandle = {
 };
 
 type CanvasProps = {
-    canvasItems: CanvasItem[]
-}
+    canvasItems: CanvasItem[];
+};
 
+const canvasPadding = 175;
+// TODO: padding is currently necessary because the center cords of the story determine the expanding of the canvas 
+// For long words, the padding should be increased, but ideally the canvas shouln't expand based on the center but on the actual Story's size
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
     const transformRef = useRef<any>(null);
     const innerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const prevItemCount = useRef(canvasItems.length);
 
     const getViewportCenter = () => {
-        if (!transformRef.current) return { x: 0, y: 0 };
+        /**
+         * Disabled for now because this causes issues when deleting elements
+         */
+        // if (!transformRef.current) return { x: 0, y: 0 };
 
-        const { scale, positionX, positionY } = transformRef.current.instance.transformState;
+        // const { scale, positionX, positionY } = transformRef.current.instance.transformState;
 
-        const centerX = (window.innerWidth / 2 - positionX) / scale;
-        const centerY = (window.innerHeight / 2 - positionY) / scale;
+        // const centerX = (window.innerWidth / 2 - positionX) / scale;
+        // const centerY = (window.innerHeight / 2 - positionY) / scale;
+
+        const centerX = window.innerWidth / 2
+        const centerY = window.innerHeight / 2
 
         return { x: centerX, y: centerY };
-    }
+    };
 
     useImperativeHandle(ref, () => ({
-        getViewportCenter
+        getViewportCenter,
     }));
 
-    console.log(canvasItems);
-    console.log(getViewportCenter());
+    // Adjust all coordinates to make them positive and add minimum padding
+    const adjustedCanvasItems = (() => {
+        const minX = Math.min(...canvasItems.map(item => item.x));
+        const minY = Math.min(...canvasItems.map(item => item.y));
 
+        const offsetX = minX < canvasPadding ? canvasPadding - minX : 0;
+        const offsetY = minY < canvasPadding ? canvasPadding - minY : 0;
 
-    // Canvas size and offset    
+        return canvasItems.map(item => ({
+            ...item,
+            x: item.x + offsetX,
+            y: item.y + offsetY,
+        }));
+    })();
+
+    // Calculate the canvas size and offsets
     const canvasSize = useMemo(() => {
-        const padding = 50;
-        const minX = Math.min(...canvasItems.map((el) => el.x));
-        const maxX = Math.max(...canvasItems.map((el) => el.x));
-        const minY = Math.min(...canvasItems.map((el) => el.y));
-        const maxY = Math.max(...canvasItems.map((el) => el.y));
+        if (adjustedCanvasItems.length === 0) {
+            return {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                offsetX: 0,
+                offsetY: 0,
+            };
+        }
 
-        const contentWidth = maxX - minX + padding * 2;
-        const contentHeight = maxY - minY + padding * 2;
+        const minX = Math.min(...adjustedCanvasItems.map(item => item.x));
+        const minY = Math.min(...adjustedCanvasItems.map(item => item.y));
+        const maxX = Math.max(...adjustedCanvasItems.map(item => item.x));
+        const maxY = Math.max(...adjustedCanvasItems.map(item => item.y));
 
         return {
-            width: Math.max(contentWidth, window.innerWidth),
-            height: Math.max(contentHeight, window.innerHeight),
-            offsetX: minX - padding,
-            offsetY: minY - padding,
+            width: Math.max(maxX - minX + canvasPadding * 2, window.innerWidth),
+            height: Math.max(maxY - minY + canvasPadding * 2, window.innerHeight),
+            offsetX: -minX + canvasPadding,
+            offsetY: -minY + canvasPadding,
         };
-    }, [canvasItems]);
+    }, [adjustedCanvasItems]);
 
-    // Limit zooming out so canvas always fills screen
+    // Calculate minimum zoom level to fit the entire canvas
     const minZoom = useMemo(() => {
         const scaleX = window.innerWidth / canvasSize.width;
         const scaleY = window.innerHeight / canvasSize.height;
         return Math.min(scaleX, scaleY); // Ensures the canvas will fit the screen height and width
     }, [canvasSize]);
 
+    // Wait for transform ref to be ready before zoom out is 100% always working
+    const waitForTransformRefReady = (): Promise<any> => {
+        return new Promise((resolve) => {
+            const interval = setInterval(() => {
+                if (transformRef.current?.instance) {
+                    clearInterval(interval);
+                    resolve(transformRef.current);
+                }
+            }, 50); // check every 50ms
+        });
+    };
+
     // Zoom out to fit all content on mount or canvasSize change
     useEffect(() => {
-        if (transformRef.current) {
-            const containerWidth = window.innerWidth;
-            const containerHeight = window.innerHeight;
+        (async () => {
+            prevItemCount.current = canvasItems.length;
 
-            const scaleX = containerWidth / canvasSize.width;
-            const scaleY = containerHeight / canvasSize.height;
-            const newScale = Math.min(scaleX, scaleY, 1);
+            if (transformRef.current) {
+                const ref = await waitForTransformRefReady();
 
-            const canvasCenterX = canvasSize.width / 2;
-            const canvasCenterY = canvasSize.height / 2;
+                const containerWidth = window.innerWidth;
+                const containerHeight = window.innerHeight;
 
-            const offsetX = containerWidth / 2 - canvasCenterX * newScale;
-            const offsetY = containerHeight / 2 - canvasCenterY * newScale;
+                const scaleX = containerWidth / canvasSize.width;
+                const scaleY = containerHeight / canvasSize.height;
+                const newScale = Math.min(scaleX, scaleY, 1);
 
-            transformRef.current.setTransform(offsetX, offsetY, newScale, 300);
-        }
+                const canvasCenterX = canvasSize.width / 2;
+                const canvasCenterY = canvasSize.height / 2;
+
+                const offsetX = containerWidth / 2 - canvasCenterX * newScale;
+                const offsetY = containerHeight / 2 - canvasCenterY * newScale;
+
+                ref.setTransform(offsetX, offsetY, newScale, 300);
+            }
+        })();
     }, [canvasSize]);
 
     // Prevent browser zoom
@@ -91,14 +135,15 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
                 e.preventDefault();
             }
         };
-        window.addEventListener("wheel", handleWheel, { passive: false });
+        window.addEventListener('wheel', handleWheel, { passive: false });
 
         return () => {
-            window.removeEventListener("wheel", handleWheel);
+            window.removeEventListener('wheel', handleWheel);
         };
     }, []);
 
-    const drawLines = () => {
+    // Draw lines between connected stories
+    useEffect(() => {
         if (!innerCanvasRef.current) return;
 
         const ctx = innerCanvasRef.current.getContext('2d');
@@ -116,18 +161,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
         };
 
         // Draw parent-child lines
-        canvasItems.forEach(parent => {
+        adjustedCanvasItems.forEach((parent) => {
             if (parent.stories) {
-                parent.stories.forEach(child => {
-                    const childFull = canvasItems.find(item => item.id === child.id);
+                parent.stories.forEach((child) => {
+                    const childFull = adjustedCanvasItems.find((item) => item.id === child.id);
                     if (childFull) drawLineBetween(parent, childFull);
                 });
             }
         });
 
         // Draw lines between top-level items (no one is linking to them)
-        const childIds = new Set(canvasItems.flatMap(item => item.stories?.map(story => story.id) || []));
-        const topLevelItems = canvasItems.filter(item => !childIds.has(item.id));
+        const childIds = new Set(adjustedCanvasItems.flatMap((item) => item.stories?.map((story) => story.id) || []));
+        const topLevelItems = adjustedCanvasItems.filter((item) => !childIds.has(item.id));
 
         // Sort top-levels (optional: by x or y position for nicer layout)
         const sortedTopLevels = topLevelItems.slice().sort((a, b) => a.x - b.x);
@@ -135,18 +180,14 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
         for (let i = 0; i < sortedTopLevels.length - 1; i++) {
             drawLineBetween(sortedTopLevels[i], sortedTopLevels[i + 1]);
         }
-    };
-
-    useEffect(() => {
-        drawLines();
-    }, [canvasItems]);
+    }, [adjustedCanvasItems]);
 
     return (
         <div
             style={{
                 width: '100vw',
                 height: '100vh',
-                overflow: 'hidden'
+                overflow: 'hidden',
             }}
         >
             <TransformWrapper
@@ -190,7 +231,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ canvasItems }, ref) => {
                                 zIndex: 1
                             }}
                         />
-                        {canvasItems.map((item, index) => (
+                        {adjustedCanvasItems.map((item, index) => (
                             <Story key={index} {...item} />
                         ))}
                         {
