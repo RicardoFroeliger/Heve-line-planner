@@ -1,0 +1,15 @@
+services:
+    heve-line-planner:
+        ports:
+            - 1235:1235
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: production
+        env_file:
+            - .env
+        volumes:
+            - ./src:/home/ricardo/Heve-line-planner/src
+        container_name: heve-line-planner
+        restart: unless-stopped
+        command: npm run start
