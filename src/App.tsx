@@ -3,6 +3,7 @@ import Canvas from './components/Canvas';
 import { useCanvasPositioning } from './hooks/useCanvasPositioning';
 import { useStore } from 'react-stores';
 import { storiesStore } from './stores/storiesStore';
+import { TooltipProviderWrapper } from './components/TooltipContext';
 
 function App() {
     const storedStories = useStore(storiesStore);
@@ -22,11 +23,13 @@ function App() {
     );
 
     return (
-        <div className="text-center h-full">
-            <header className="bg-[#282c34] min-h-[100vh] flex flex-col items-center text-white">
-                <Canvas ref={canvasRef} canvasItems={canvasItems} />
-            </header>
-        </div>
+        <TooltipProviderWrapper>
+            <div className="text-center h-full">
+                <header className="bg-[#282c34] min-h-[100vh] flex flex-col items-center text-white">
+                    <Canvas ref={canvasRef} canvasItems={canvasItems} />
+                </header>
+            </div>
+        </TooltipProviderWrapper>
     );
 }
 

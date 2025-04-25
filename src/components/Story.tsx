@@ -1,16 +1,10 @@
-
 import React from 'react';
 import { useStore } from 'react-stores';
 import { PlusCircleIcon } from 'lucide-react';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "./ui/tooltip";
 import { storiesStore } from '../stores/storiesStore';
 import { v4 as uuidv4 } from 'uuid';
 import { CanvasItem } from './Canvas';
+import { TogglableTooltip } from './TogglableTooltip';
 
 type StoryProps = CanvasItem;
 
@@ -114,20 +108,12 @@ function Story({
             )
             : (
                 <div className="absolute -translate-x-1/2 -translate-y-1/2 z-10" style={{ left: x, top: y }}>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger className="rounded-xl p-2 bg-blue-600 flex justify-center items-center cursor-pointer text-2xl">
-
-                                <span>{title}</span>
-                            </TooltipTrigger>
-                            <TooltipContent className="flex flex-col justify-center">
-                                <button className="cursor-pointer">View</button>
-                                <button className="cursor-pointer" onClick={() => createStory(id)}>Create</button>
-                                <button className="cursor-pointer" onClick={() => deleteStory(id)}>Delete</button>
-                                <button className="cursor-pointer">Edit</button>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <TogglableTooltip tooltipTriggerText={title}>
+                        <button className="cursor-pointer">View</button>
+                        <button className="cursor-pointer" onClick={() => createStory(id)}>Create</button>
+                        <button className="cursor-pointer" onClick={() => deleteStory(id)}>Delete</button>
+                        <button className="cursor-pointer">Edit</button>
+                    </TogglableTooltip>
                 </div>
             )
     );
